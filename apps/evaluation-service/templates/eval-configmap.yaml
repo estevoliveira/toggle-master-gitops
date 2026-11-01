@@ -5,9 +5,7 @@ metadata:
   namespace: toggle-master
 data:
   PORT: "8004"
-  REDIS_URL: "redis://dev-redis.xcql9n.ng.0001.use1.cache.amazonaws.com:6379"
   FLAG_SERVICE_URL: "http://flag-service:8002"
   TARGETING_SERVICE_URL: "http://targeting-service:8003"
-  SERVICE_API_KEY: "tm_key_ad01fc2bbb20c9f0d4595faf41370da731496dfa994a4183e91631292ca9e812"
-  AWS_SQS_URL: "https://sqs.us-east-1.amazonaws.com/581571885952/toggle-master-sqs"
   AWS_REGION: "us-east-1"
+

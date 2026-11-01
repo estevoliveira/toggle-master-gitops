@@ -12,19 +12,24 @@ spec:
       app: analytics-service
   template:
     metadata:
+      annotations:
+        togglemaster.io/config-revision: {{ .Values.academyConfigRevision | default "initial" | quote }}
+        togglemaster.io/aws-revision: {{ .Values.academyAwsRevision | default "initial" | quote }}
       labels:
         app: analytics-service
     spec:
       containers:
       - name: analytics-service
-        image: 581571885952.dkr.ecr.us-east-1.amazonaws.com/toggle-master/analytics-service:v1.0
-        imagePullPolicy: IfNotPresent
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
         - containerPort: 8005
         
         envFrom:
         - configMapRef:
             name: analytics-service-config
+        - secretRef:
+            name: academy-runtime
 
         livenessProbe:
           httpGet:
@@ -51,3 +56,4 @@ spec:
           limits:
             cpu: 500m
             memory: 512Mi
+

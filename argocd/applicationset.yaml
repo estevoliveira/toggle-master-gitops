@@ -36,6 +36,20 @@ spec:
         server: https://kubernetes.default.svc
         namespace: toggle-master
 
+      ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          name: analytics-service
+          namespace: toggle-master
+          jsonPointers:
+            - /spec/replicas
+        - group: apps
+          kind: Deployment
+          name: evaluation-service
+          namespace: toggle-master
+          jsonPointers:
+            - /spec/replicas
+
       syncPolicy:
         automated:
           prune: true
@@ -44,6 +58,7 @@ spec:
         syncOptions:
           - CreateNamespace=true
           - PruneLast=true
+          - RespectIgnoreDifferences=true
 
         retry:
           limit: 5
@@ -51,3 +66,4 @@ spec:
             duration: 5s
             factor: 2
             maxDuration: 3m
+

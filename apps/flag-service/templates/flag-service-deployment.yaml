@@ -16,6 +16,8 @@ spec:
 
   template:
     metadata:
+      annotations:
+        togglemaster.io/config-revision: {{ .Values.academyConfigRevision | default "initial" | quote }}
       labels:
         app: {{ .Values.name }}
 
@@ -35,7 +37,10 @@ spec:
 
           env:
             - name: DATABASE_URL
-              value: {{ .Values.env.databaseUrl | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: academy-databases
+                  key: flag-url
 
             - name: PORT
               value: {{ .Values.env.port | quote }}
@@ -71,3 +76,4 @@ spec:
             limits:
               cpu: {{ .Values.resources.limits.cpu | quote }}
               memory: {{ .Values.resources.limits.memory | quote }}
+

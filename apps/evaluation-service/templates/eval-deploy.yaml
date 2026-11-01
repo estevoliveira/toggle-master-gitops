@@ -16,6 +16,9 @@ spec:
 
   template:
     metadata:
+      annotations:
+        togglemaster.io/config-revision: {{ .Values.academyConfigRevision | default "initial" | quote }}
+        togglemaster.io/aws-revision: {{ .Values.academyAwsRevision | default "initial" | quote }}
       labels:
         app: {{ .Values.app.name }}
 
@@ -32,6 +35,15 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ .Values.configMap.name }}
+            - secretRef:
+                name: academy-runtime
+
+          env:
+            - name: SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: academy-databases
+                  key: service-api-key
 
           livenessProbe:
             httpGet:

@@ -5,6 +5,4 @@ metadata:
   namespace: toggle-master
 data:
   PORT: "8005"
-  AWS_SQS_URL: "https://sqs.us-east-1.amazonaws.com/581571885952/feature-evaluation-events"
   AWS_REGION: "us-east-1"
-  AWS_DYNAMODB_TABLE: "user-events"
