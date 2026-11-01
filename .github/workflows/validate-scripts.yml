@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - scripts/**
+      - tests/**
       - .github/workflows/validate-scripts.yml
   push:
     branches:
       - master
     paths:
       - scripts/**
+      - tests/**
       - .github/workflows/validate-scripts.yml
 
 permissions:
@@ -25,3 +27,7 @@ jobs:
         run: bash -n scripts/fase4-preflight.sh
       - name: Run ShellCheck
         run: shellcheck --severity=warning scripts/fase4-preflight.sh
+      - name: Compile functional smoke script
+        run: python3 -m py_compile scripts/fase4-smoke.py
+      - name: Verify smoke contracts and fixture cleanup
+        run: python3 -m unittest discover -s tests -p 'test_fase4_smoke.py' -v
