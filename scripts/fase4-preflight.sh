@@ -118,7 +118,7 @@ section '4. Endpoints prontos e health checks'
 if read_json "$work_dir/slices.json" -n "$app_namespace" get endpointslices && \
    read_json "$work_dir/services.json" -n "$app_namespace" get services; then
   proxy_allowed=false
-  if kubectl --request-timeout=15s auth can-i get services/proxy -n "$app_namespace" --quiet; then
+  if kubectl --request-timeout=15s auth can-i get services --subresource=proxy -n "$app_namespace" --quiet; then
     proxy_allowed=true
   else
     warn 'Sem permissao services/proxy: os testes HTTP ficarao inconclusivos'
