@@ -25,9 +25,9 @@ O script usa AWS CLI, kubectl e jq. Ele consulta a sessao AWS, compara o endpoin
 1. Nos Ready, agendamento habilitado, recursos reservados e uso atual quando Metrics Server estiver disponivel.
 2. Replicas disponiveis e rollout observado dos cinco deployments.
 3. Pods, HPAs e ResourceQuota do namespace `toggle-master`.
-4. EndpointSlices com destinos prontos e `GET /health` de cada servico, pelo proxy autenticado da API Kubernetes.
+4. EndpointSlices com destinos prontos e `GET /health` de cada servico, pelo proxy autenticado da API Kubernetes. O valor textual de status aceita `ok` e `OK`.
 5. Disponibilidade do `argocd-server`, estado Synced/Healthy das seis Applications e URL declarada de seu Load Balancer.
-6. Eventos Warning das aplicacoes.
+6. Os ultimos 15 registros Warning das aplicacoes, identificados como historico que pode incluir problemas ja resolvidos.
 
 O diagnostico faz consultas de leitura e chamadas GET de health. Nao aplica manifests, nao reinicia workloads e nao consulta objetos Secret nem imprime variaveis de ambiente ou logs das aplicacoes. O comando `update-kubeconfig` modifica somente a configuracao local de acesso.
 
@@ -49,7 +49,7 @@ Enviar a saida do diagnostico, principalmente as linhas FALHA/AVISO, a capacidad
 - **Requests:** recursos reservados usados pelo scheduler para decidir onde o pod cabe. Uso baixo agora nao garante espaco para novos requests.
 - **Synced/Healthy:** o Argo CD reconhece a configuracao sincronizada e os recursos saudaveis.
 
-Os endpoints `/health` atuais devolvem status simples. Eles nao comprovam todas as operacoes de PostgreSQL, Redis, SQS e DynamoDB. Depois deste diagnostico, o proximo checkpoint e validar um fluxo funcional real antes de marcar a base completa.
+Os endpoints `/health` atuais devolvem status simples. Eles nao comprovam todas as operacoes de PostgreSQL, Redis, SQS e DynamoDB. Depois deste diagnostico, executar a [etapa 2 de teste funcional](02-teste-funcional.md) antes de marcar a base completa.
 
 ## Criterio de pronto desta etapa
 
