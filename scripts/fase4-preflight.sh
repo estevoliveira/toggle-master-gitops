@@ -97,7 +97,7 @@ else
   fail 'Nenhum no Ready aceita novos pods'
 fi
 if ! kubectl --request-timeout=15s describe nodes | awk '
-  /^Name:/ { node=$2 }
+  /^Name:/ { node=$2; show=0 }
   /^Allocated resources:/ { print "\nReservas do no " node; show=1 }
   /^Events:/ { show=0 }
   show { print }
@@ -134,11 +134,12 @@ if read_json "$work_dir/slices.json" -n "$app_namespace" get endpointslices && \
     fi
     ok "$service: $ready endpoint(s) pronto(s), porta $port"
     if [[ "$proxy_allowed" == true ]]; then
-      if response="$(kubectl --request-timeout=10s get --raw "/api/v1/namespaces/$app_namespace/services/http:$service:$port/proxy/health" 2> "$work_dir/health-error.txt")" && \
-         jq -e '.status == "ok"' <<< "$response" >/dev/null 2>&1; then
-        ok "$service /health respondeu status=ok via API do Kubernetes"
+      if ! response="$(kubectl --request-timeout=10s get --raw "/api/v1/namespaces/$app_namespace/services/http:$service:$port/proxy/health" 2> "$work_dir/health-error.txt")"; then
+        fail "$service /health: falha na chamada HTTP via API Kubernetes"
+      elif jq -e '.status | if type == "string" then ascii_downcase == "ok" else false end' <<< "$response" >/dev/null 2>&1; then
+        ok "$service /health respondeu status=$(jq -r '.status' <<< "$response") via API do Kubernetes"
       else
-        fail "$service /health nao foi confirmado via proxy; verificar aplicacao, RBAC e conectividade"
+        fail "$service /health respondeu, mas o JSON nao contem status=ok ou OK"
       fi
     fi
   done
@@ -169,9 +170,14 @@ if read_json "$work_dir/argo-service.json" -n "$argo_namespace" get service argo
   fi
 fi
 
-section '6. Eventos recentes do namespace das aplicacoes'
-inspect -n "$app_namespace" get events --field-selector type=Warning \
-  --sort-by=.lastTimestamp
+section '6. Ultimos 15 eventos Warning (historico; podem estar resolvidos)'
+if kubectl --request-timeout=15s -n "$app_namespace" get events --field-selector type=Warning \
+  --sort-by=.lastTimestamp > "$work_dir/events.txt"; then
+  head -n 1 "$work_dir/events.txt"
+  tail -n +2 "$work_dir/events.txt" | tail -n 15
+else
+  warn 'Consulta ao historico de eventos indisponivel'
+fi
 
 section 'Resumo da etapa 1'
 printf 'Falhas: %s | Avisos: %s\n' "$failures" "$warnings"
