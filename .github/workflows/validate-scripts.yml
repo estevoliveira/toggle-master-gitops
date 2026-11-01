@@ -1,0 +1,27 @@
+name: Validate operational scripts
+
+on:
+  pull_request:
+    paths:
+      - scripts/**
+      - .github/workflows/validate-scripts.yml
+  push:
+    branches:
+      - master
+    paths:
+      - scripts/**
+      - .github/workflows/validate-scripts.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Bash syntax and ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate Bash syntax
+        run: bash -n scripts/fase4-preflight.sh
+      - name: Run ShellCheck
+        run: shellcheck --severity=warning scripts/fase4-preflight.sh
