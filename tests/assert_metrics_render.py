@@ -5,7 +5,13 @@ import sys
 import yaml
 
 
-documents = [obj for obj in yaml.safe_load_all(Path(sys.argv[1]).read_text()) if isinstance(obj, dict)]
+class KubernetesLoader(yaml.SafeLoader):
+    """CRDs usam '=' como string; PyYAML atribui a tag YAML 1.1 'value'."""
+
+
+KubernetesLoader.add_constructor("tag:yaml.org,2002:value", KubernetesLoader.construct_scalar)
+documents = [obj for obj in yaml.load_all(Path(sys.argv[1]).read_text(), Loader=KubernetesLoader)
+             if isinstance(obj, dict)]
 expected_host = "grafana.example.test"
 
 
