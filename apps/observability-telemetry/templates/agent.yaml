@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-logs
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels: {app: otel-logs}
+  template:
+    metadata:
+      labels: {app: otel-logs}
+    spec:
+      tolerations:
+        - {operator: Exists, effect: NoSchedule}
+      containers:
+        - name: collector
+          image: {{ .Values.collectorImage | quote }}
+          args: [--config=/etc/otel/config.yaml]
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          readinessProbe:
+            httpGet: {path: /, port: 13133}
+          resources:
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {cpu: 200m, memory: 192Mi}
+          volumeMounts:
+            - {name: config, mountPath: /etc/otel, readOnly: true}
+            - {name: logs, mountPath: /var/log/pods, readOnly: true}
+            - {name: checkpoints, mountPath: /var/lib/otelcol}
+      volumes:
+        - name: config
+          configMap: {name: agent-config}
+        - name: logs
+          hostPath: {path: /var/log/pods, type: Directory}
+        - name: checkpoints
+          hostPath: {path: /var/lib/toggle-otel, type: DirectoryOrCreate}

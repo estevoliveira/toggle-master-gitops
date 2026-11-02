@@ -1,0 +1,5 @@
+apiVersion: v2
+name: observability-telemetry
+description: Loki, OTel Collector e resposta a incidentes para o laboratorio Fase 4
+type: application
+version: 0.1.0

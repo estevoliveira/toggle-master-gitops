@@ -33,6 +33,9 @@ spec:
 
           envFrom:
             - configMapRef:
+                name: fase4-telemetry
+                optional: true
+            - configMapRef:
                 name: auth-service-config
 
           env:
@@ -68,3 +71,4 @@ spec:
 
           resources:
 {{ toYaml .Values.resources | indent 12 }}
+

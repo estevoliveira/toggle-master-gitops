@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-gateway
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: otel-gateway}
+  template:
+    metadata:
+      labels: {app: otel-gateway}
+    spec:
+      containers:
+        - name: collector
+          image: {{ .Values.collectorImage | quote }}
+          args: [--config=/etc/otel/config.yaml]
+          env:
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom:
+                secretKeyRef: {name: fase4-integrations, key: new-relic-license-key}
+            - name: NEW_RELIC_OTLP_ENDPOINT
+              value: {{ .Values.newRelicEndpoint | quote }}
+          ports:
+            - {name: otlp-http, containerPort: 4318}
+            - {name: otlp-grpc, containerPort: 4317}
+            - {name: metrics, containerPort: 8889}
+          readinessProbe:
+            httpGet: {path: /, port: 13133}
+          livenessProbe:
+            httpGet: {path: /, port: 13133}
+          resources:
+            requests: {cpu: 100m, memory: 192Mi}
+            limits: {cpu: 500m, memory: 512Mi}
+          volumeMounts:
+            - {name: config, mountPath: /etc/otel, readOnly: true}
+      volumes:
+        - name: config
+          configMap: {name: gateway-config}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-gateway
+  namespace: {{ .Release.Namespace }}
+  labels: {app: otel-gateway}
+spec:
+  selector: {app: otel-gateway}
+  ports:
+    - {name: otlp-http, port: 4318, targetPort: otlp-http}
+    - {name: otlp-grpc, port: 4317, targetPort: otlp-grpc}
+    - {name: metrics, port: 8889, targetPort: metrics}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otel-gateway
+  namespace: {{ .Release.Namespace }}
+  labels: {release: observability-metrics}
+spec:
+  selector:
+    matchLabels: {app: otel-gateway}
+  endpoints:
+    - {port: metrics, interval: 15s}

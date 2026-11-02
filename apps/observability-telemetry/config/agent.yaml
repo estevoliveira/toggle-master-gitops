@@ -1,0 +1,39 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  file_storage:
+    directory: /var/lib/otelcol
+receivers:
+  filelog:
+    include:
+    - /var/log/pods/*/*/*.log
+    include_file_path: true
+    start_at: end
+    storage: file_storage
+    operators:
+    - type: container
+      id: container-parser
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 150
+    spike_limit_mib: 30
+  batch:
+    timeout: 5s
+    send_batch_size: 256
+exporters:
+  otlphttp/gateway:
+    endpoint: http://otel-gateway.observability.svc.cluster.local:4318
+service:
+  extensions:
+  - health_check
+  - file_storage
+  pipelines:
+    logs:
+      receivers:
+      - filelog
+      processors:
+      - memory_limiter
+      - batch
+      exporters:
+      - otlphttp/gateway

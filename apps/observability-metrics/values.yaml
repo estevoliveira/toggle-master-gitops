@@ -1,6 +1,4 @@
-# Descoberto pelo bootstrap a partir do Load Balancer do ingress-nginx.
-publicHost: ""
-
+publicHost: ''
 monitoring:
   fullnameOverride: monitoring
   defaultRules:
@@ -25,8 +23,12 @@ monitoring:
       patch:
         enabled: false
     resources:
-      requests: {cpu: 50m, memory: 64Mi}
-      limits: {cpu: 250m, memory: 256Mi}
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
   prometheus:
     service:
       type: ClusterIP
@@ -39,16 +41,28 @@ monitoring:
       storageSpec:
         emptyDir: {}
       resources:
-        requests: {cpu: 150m, memory: 400Mi}
-        limits: {cpu: "1", memory: 1Gi}
+        requests:
+          cpu: 150m
+          memory: 400Mi
+        limits:
+          cpu: '1'
+          memory: 1Gi
   kube-state-metrics:
     resources:
-      requests: {cpu: 50m, memory: 64Mi}
-      limits: {cpu: 250m, memory: 256Mi}
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
   prometheus-node-exporter:
     resources:
-      requests: {cpu: 25m, memory: 32Mi}
-      limits: {cpu: 100m, memory: 128Mi}
+      requests:
+        cpu: 25m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
   grafana:
     enabled: true
     fullnameOverride: grafana
@@ -67,19 +81,32 @@ monitoring:
     persistence:
       enabled: false
     env:
-      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SECURE: 'true'
     envValueFrom:
       GF_SERVER_ROOT_URL:
         configMapKeyRef:
           name: grafana-public-url
           key: root-url
+      HEAL_TOKEN:
+        secretKeyRef:
+          name: fase4-integrations
+          key: heal-token
+          optional: true
     resources:
-      requests: {cpu: 100m, memory: 128Mi}
-      limits: {cpu: 300m, memory: 512Mi}
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 512Mi
     sidecar:
       resources:
-        requests: {cpu: 10m, memory: 32Mi}
-        limits: {cpu: 100m, memory: 128Mi}
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
       dashboards:
         enabled: true
         searchNamespace: observability
@@ -92,3 +119,9 @@ monitoring:
         resource: configmap
         alertmanager:
           enabled: false
+      alerts:
+        enabled: true
+        searchNamespace: observability
+        resource: configmap
+        label: grafana_alert
+        labelValue: '1'

@@ -34,11 +34,20 @@ spec:
 
           envFrom:
             - configMapRef:
+                name: fase4-telemetry
+                optional: true
+            - configMapRef:
                 name: {{ .Values.configMap.name }}
             - secretRef:
                 name: academy-runtime
 
           env:
+            - name: DEMO_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fase4-demo
+                  key: demo-token
+                  optional: true
             - name: SERVICE_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -77,3 +86,4 @@ spec:
             limits:
               cpu: {{ .Values.resources.limits.cpu }}
               memory: {{ .Values.resources.limits.memory }}
+

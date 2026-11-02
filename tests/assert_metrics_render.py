@@ -50,7 +50,7 @@ assert one("ConfigMap", "grafana-public-url")["data"]["root-url"] == "https://gr
 
 dashboard = json.loads(one("ConfigMap", "grafana-togglemaster-dashboard")["data"]["togglemaster.json"])
 assert dashboard["uid"] == "togglemaster-fase4"
-assert len(dashboard["panels"]) == 4
+assert len(dashboard["panels"]) == 6
 assert all(panel["targets"][0]["expr"] for panel in dashboard["panels"])
 assert any(panel["targets"][0]["legendFormat"] == "{{instance}}" for panel in dashboard["panels"])
 

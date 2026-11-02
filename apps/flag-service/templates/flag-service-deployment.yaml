@@ -33,6 +33,9 @@ spec:
 
           envFrom:
             - configMapRef:
+                name: fase4-telemetry
+                optional: true
+            - configMapRef:
                 name: {{ .Values.configMap.name }}
 
           env:
@@ -76,4 +79,5 @@ spec:
             limits:
               cpu: {{ .Values.resources.limits.cpu | quote }}
               memory: {{ .Values.resources.limits.memory | quote }}
+
 

@@ -1,0 +1,20 @@
+{{- range $name := list "gateway" "agent" "loki" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-config
+  namespace: {{ $.Release.Namespace }}
+data:
+  config.yaml: |
+{{ $.Files.Get (printf "config/%s.yaml" $name) | indent 4 }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: self-healer-code
+  namespace: {{ .Release.Namespace }}
+data:
+  server.py: |
+{{ .Files.Get "files/self_healer.py" | indent 4 }}

@@ -39,6 +39,12 @@ spec:
       ignoreDifferences:
         - group: apps
           kind: Deployment
+          name: evaluation-service
+          namespace: toggle-master
+          jsonPointers:
+            - /spec/template/metadata/annotations/kubectl.kubernetes.io~1restartedAt
+        - group: apps
+          kind: Deployment
           name: analytics-service
           namespace: toggle-master
           jsonPointers:
@@ -66,4 +72,5 @@ spec:
             duration: 5s
             factor: 2
             maxDuration: 3m
+
 

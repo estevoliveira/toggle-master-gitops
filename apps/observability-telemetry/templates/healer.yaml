@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: self-healer
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: evaluation-restart
+  namespace: toggle-master
+rules:
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [evaluation-service]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: evaluation-restart
+  namespace: toggle-master
+subjects:
+  - kind: ServiceAccount
+    name: self-healer
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: evaluation-restart
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: self-healer
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: self-healer}
+  template:
+    metadata:
+      labels: {app: self-healer}
+    spec:
+      serviceAccountName: self-healer
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      containers:
+        - name: self-healer
+          image: {{ .Values.pythonImage | quote }}
+          command: [python, -u, /app/server.py]
+          env:
+            - name: HEAL_TOKEN
+              valueFrom:
+                secretKeyRef: {name: fase4-integrations, key: heal-token}
+            - name: PAGERDUTY_ROUTING_KEY
+              valueFrom:
+                secretKeyRef: {name: fase4-integrations, key: pagerduty-routing-key}
+            - name: DISCORD_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef: {name: fase4-integrations, key: discord-webhook-url}
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: code, mountPath: /app, readOnly: true}
+      volumes:
+        - name: code
+          configMap: {name: self-healer-code}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: self-healer
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector: {app: self-healer}
+  ports: [{name: http, port: 8080, targetPort: http}]

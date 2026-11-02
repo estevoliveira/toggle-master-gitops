@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fase4-telemetry
+  namespace: toggle-master
+data:
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-gateway.observability.svc.cluster.local:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_SERVICE_NAMESPACE: toggle-master
+  OTEL_METRIC_EXPORT_INTERVAL: "10000"
+  DEMO_ENABLED: "true"

@@ -1,0 +1,4 @@
+collectorImage: otel/opentelemetry-collector-contrib:0.163.2
+lokiImage: grafana/loki:3.7.9
+pythonImage: python:3.12-slim
+newRelicEndpoint: https://otlp.nr-data.net:4318

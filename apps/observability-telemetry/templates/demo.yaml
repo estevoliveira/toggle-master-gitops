@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fase4-demo-code
+  namespace: toggle-master
+data:
+  demo_load.py: |
+{{ .Files.Get "files/demo_load.py" | indent 4 }}
