@@ -3,7 +3,7 @@ groups:
 - orgId: 1
   name: fase4
   folder: ToggleMaster
-  interval: 15s
+  interval: 30s
   rules:
   - uid: evaluation-errors
     title: EvaluationHighErrorRate
