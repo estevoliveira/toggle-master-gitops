@@ -1,0 +1,53 @@
+name: Validate observability metrics
+
+on:
+  pull_request:
+    paths:
+      - apps/observability-metrics/**
+      - argocd/observability-metrics.yaml
+      - tests/assert_metrics_render.py
+      - .github/workflows/validate-observability.yml
+  push:
+    branches: [master]
+    paths:
+      - apps/observability-metrics/**
+      - argocd/observability-metrics.yaml
+      - tests/assert_metrics_render.py
+      - .github/workflows/validate-observability.yml
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    name: Render and validate Prometheus/Grafana
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install YAML parser for render checks
+        run: python -m pip install PyYAML==6.0.2
+      - name: Resolve pinned chart dependency
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm dependency build apps/observability-metrics
+      - name: Lint and render for EKS Kubernetes 1.36
+        run: |
+          helm lint apps/observability-metrics --strict --set-string publicHost=grafana.example.test
+          helm template observability-metrics apps/observability-metrics \
+            --namespace observability --kube-version 1.36.0 --include-crds \
+            --set-string publicHost=grafana.example.test > /tmp/metrics-render.yaml
+          python tests/assert_metrics_render.py /tmp/metrics-render.yaml
+      - name: Reject an unconfigured public hostname
+        run: |
+          if helm template observability-metrics apps/observability-metrics \
+              --namespace observability --kube-version 1.36.0 >/dev/null 2>/tmp/host-error.txt; then
+            echo "Render should require publicHost"
+            exit 1
+          fi
+          grep -q publicHost /tmp/host-error.txt

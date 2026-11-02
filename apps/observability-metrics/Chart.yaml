@@ -1,0 +1,10 @@
+apiVersion: v2
+name: observability-metrics
+description: Metricas do laboratorio ToggleMaster com Prometheus e Grafana
+type: application
+version: 0.1.0
+dependencies:
+  - name: kube-prometheus-stack
+    alias: monitoring
+    version: 92.17.0
+    repository: https://prometheus-community.github.io/helm-charts

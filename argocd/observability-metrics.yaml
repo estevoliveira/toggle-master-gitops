@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-metrics
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: toggle-master-observability
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ramondata/toggle-master-gitops.git
+    targetRevision: master
+    path: apps/observability-metrics
+    helm:
+      releaseName: observability-metrics
+      parameters:
+        - name: publicHost
+          value: __GRAFANA_HOST__
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - PruneLast=true
+      - FailOnSharedResource=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 2m

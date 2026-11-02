@@ -24,9 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Validate Bash syntax
-        run: bash -n scripts/fase4-preflight.sh
+        run: |
+          for script in scripts/*.sh; do bash -n "$script"; done
       - name: Run ShellCheck
-        run: shellcheck --severity=warning scripts/fase4-preflight.sh
+        run: shellcheck --severity=warning scripts/*.sh
       - name: Compile functional smoke script
         run: python3 -m py_compile scripts/fase4-smoke.py
       - name: Verify smoke contracts and fixture cleanup
