@@ -7,7 +7,12 @@ region="${TARGET_REGION:-us-east-1}"
 cluster="${TARGET_CLUSTER:-toggle-cluster}"
 ref="${GITOPS_REF:-master}"
 work_dir="$(mktemp -d)"
-trap 'rm -rf -- "$work_dir"' EXIT
+held_nodes=()
+cleanup() {
+  for node in "${held_nodes[@]}"; do kubectl uncordon "$node" || true; done
+  rm -rf -- "$work_dir"
+}
+trap cleanup EXIT
 for command in aws kubectl jq curl openssl; do command -v "$command" >/dev/null; done
 [[ "$ref" =~ ^[a-zA-Z0-9._/-]+$ ]]
 aws sts get-caller-identity --no-cli-pager >/dev/null
@@ -42,6 +47,41 @@ if ! kubectl -n toggle-master get secret fase4-demo >/dev/null 2>&1; then
   openssl rand -hex 32 | tr -d '\n' > "$work_dir/demo"
   kubectl -n toggle-master create secret generic fase4-demo --from-file=demo-token="$work_dir/demo"
 fi
+# Reserva uma vaga por no para o DaemonSet de logs. O cluster pequeno tem limite de 17 pods/no.
+# Move somente uma replica de um servico que tem pelo menos duas replicas disponiveis.
+kubectl get nodes -o json > "$work_dir/nodes.json"
+while IFS=$'\t' read -r node max_pods; do
+  if [[ -n "$(kubectl -n observability get pods -l app=otel-logs --field-selector "spec.nodeName=$node" -o name)" ]]; then
+    continue
+  fi
+  kubectl get pods -A --field-selector "spec.nodeName=$node" -o json > "$work_dir/node-pods.json"
+  used="$(jq '[.items[] | select(.status.phase != "Succeeded" and .status.phase != "Failed")] | length' "$work_dir/node-pods.json")"
+  if (( used < max_pods )); then continue; fi
+  selected=""
+  for service in auth-service flag-service targeting-service; do
+    available="$(kubectl -n toggle-master get deployment "$service" -o jsonpath='{.status.availableReplicas}')"
+    if (( ${available:-0} < 2 )); then continue; fi
+    selected="$(jq -r --arg service "$service" '[.items[] |
+      select(.metadata.namespace == "toggle-master" and .metadata.labels.app == $service) |
+      select(.metadata.deletionTimestamp == null) |
+      select(any(.metadata.ownerReferences[]?; .kind == "ReplicaSet")) |
+      select(any(.status.conditions[]?; .type == "Ready" and .status == "True"))][0].metadata.name // empty' "$work_dir/node-pods.json")"
+    if [[ -n "$selected" ]]; then break; fi
+  done
+  if [[ -z "$selected" ]]; then
+    printf 'No %s lotado e sem replica redundante para mover. Envie kubectl get pods -A -o wide.\n' "$node"
+    exit 1
+  fi
+  original="$(kubectl get node "$node" -o jsonpath='{.spec.unschedulable}')"
+  if [[ "$original" != true ]]; then
+    held_nodes+=("$node")
+    kubectl cordon "$node"
+  fi
+  printf 'Liberando uma vaga de agente no no %s, redistribuindo %s.\n' "$node" "$selected"
+  kubectl -n toggle-master delete pod "$selected"
+  kubectl -n toggle-master rollout status "deployment/$service" --timeout=180s
+done < <(jq -r '.items[] | select(any(.status.conditions[]?; .type == "Ready" and .status == "True")) | [.metadata.name,.status.allocatable.pods] | @tsv' "$work_dir/nodes.json")
+
 base="https://raw.githubusercontent.com/ramondata/toggle-master-gitops/$ref"
 for file in observability-telemetry applicationset; do
   curl -fsSL --connect-timeout 10 --max-time 60 "$base/argocd/$file.yaml" -o "$work_dir/$file.yaml"
@@ -60,6 +100,8 @@ kubectl apply -f "$work_dir/applicationset.yaml"
 kubectl -n argocd annotate application observability-telemetry argocd.argoproj.io/refresh=hard --overwrite
 kubectl -n argocd wait application/observability-telemetry --for=jsonpath='{.status.sync.status}'=Synced --timeout=600s
 kubectl -n argocd wait application/observability-telemetry --for=jsonpath='{.status.health.status}'=Healthy --timeout=600s
+for node in "${held_nodes[@]}"; do kubectl uncordon "$node"; done
+held_nodes=()
 # Recria o pod para carregar o Secret novo; o Deployment permanece gerenciado pelo Argo CD.
 kubectl -n observability delete pods -l app.kubernetes.io/name=grafana
 kubectl -n observability rollout status deployment/grafana --timeout=300s
