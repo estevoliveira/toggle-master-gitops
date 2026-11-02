@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Atualiza os cinco Secrets a partir da sessao AWS atual, sem colar chaves no chat.
+set -euo pipefail
+set +x
+umask 077
+for command in aws gh python3; do
+  command -v "$command" >/dev/null || { printf 'Instale o comando %s antes de executar.\n' "$command"; exit 2; }
+done
+region="${TARGET_REGION:-us-east-1}"
+work_dir="$(mktemp -d)"
+trap 'rm -rf -- "$work_dir"' EXIT
+aws sts get-caller-identity --no-cli-pager >/dev/null
+aws eks describe-cluster --name toggle-cluster --region "$region" --query cluster.status --output text >/dev/null
+if ! gh auth status >/dev/null 2>&1; then
+  gh auth login --hostname github.com --git-protocol https --web
+fi
+login="$(gh api user --jq .login)"
+[[ "$login" == ramondata ]] || { echo 'Use a conta GitHub ramondata para atualizar estes repositorios.'; exit 2; }
+aws configure export-credentials --format process > "$work_dir/credentials.json"
+python3 - "$work_dir" <<'PY'
+import datetime
+import json
+from pathlib import Path
+import sys
+root=Path(sys.argv[1])
+data=json.loads((root/'credentials.json').read_text())
+keys={'aws_access_key_id':'AccessKeyId','aws_secret_access_key':'SecretAccessKey','aws_session_token':'SessionToken'}
+for source in keys.values():
+    value=data.get(source,'')
+    if not value or any(c.isspace() for c in value):
+        raise SystemExit('Sessao temporaria incompleta; renove o lab.')
+if data.get('Expiration'):
+    expiry=datetime.datetime.fromisoformat(data['Expiration'].replace('Z','+00:00'))
+    if (expiry-datetime.datetime.now(datetime.timezone.utc)).total_seconds()<1200:
+        raise SystemExit('Renove a sessao: faltam menos de 20 minutos para expirar.')
+(root/'academy.ini').write_text('[default]\n'+''.join(k+'='+data[v]+'\n' for k,v in keys.items()))
+PY
+for service in auth-service flag-service targeting-service evaluation-service analytics-service; do
+  aws ecr describe-repositories --region "$region" --repository-names "toggle-master/$service" >/dev/null
+  gh secret set AWS_ACADEMY_CREDENTIALS --repo "ramondata/$service" < "$work_dir/academy.ini"
+done
+for service in auth-service flag-service targeting-service evaluation-service analytics-service; do
+  case "$service" in
+    auth-service) workflow=first-ci-auth.yml ;;
+    flag-service) workflow=ci-flag.yaml ;;
+    targeting-service) workflow=targeting-ci.yml ;;
+    evaluation-service) workflow=eval_deploy_ci.yml ;;
+    analytics-service) workflow=ci-analytics.yml ;;
+  esac
+  gh workflow run "$workflow" --repo "ramondata/$service" --ref aws-cloud-k8s
+  printf 'Esteira acionada: https://github.com/ramondata/%s/actions\n' "$service"
+done
+printf 'Credenciais atualizadas e publicacoes solicitadas. Aguarde build, scan, push ECR e update GitOps.\n'

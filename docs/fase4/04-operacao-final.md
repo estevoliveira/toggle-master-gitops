@@ -22,7 +22,9 @@ Nao colocar essas chaves no Git nem enviar pelo chat. O instalador solicita no t
 
 ## Instalacao (CloudShell)
 
-Com a sessao Academy valida, publique as imagens pela esteira existente dos cinco servicos (branch aws-cloud-k8s). Se a sessao expirar, atualize AWS_ACADEMY_CREDENTIALS nos repositorios e reexecute os workflows que falharam. As versoes antigas nao exportam telemetria; nao basta instalar o Collector.
+Com a sessao Academy valida, publique as imagens pela esteira existente dos cinco servicos (branch aws-cloud-k8s).
+
+Opcao automatizada: execute scripts/fase4-refresh-ci.sh em um terminal com AWS CLI v2 e GitHub CLI (gh). Ele valida a sessao, solicita login GitHub se necessario, atualiza o Secret AWS_ACADEMY_CREDENTIALS nos cinco repositorios por stdin e aciona as esteiras. Nunca imprime os valores. Opcao manual: Settings > Secrets and variables > Actions > AWS_ACADEMY_CREDENTIALS em cada repositorio; depois Actions > workflow CI > Run workflow na branch aws-cloud-k8s. Se a sessao expirar, atualize AWS_ACADEMY_CREDENTIALS nos repositorios e reexecute os workflows que falharam. As versoes antigas nao exportam telemetria; nao basta instalar o Collector.
 
 Baixe scripts/fase4-install-telemetry.sh do commit revisado e execute com bash. O script usa o cluster toggle-cluster em us-east-1, prepara Secrets e registra a Application observability-telemetry. Nunca copia a chave comercial para os microsservicos.
 
