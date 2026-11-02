@@ -52,7 +52,7 @@ jobs:
             -v "$PWD/tests/apm_stub.py:/app.py:ro" python:3.12-slim python /app.py
           docker run -d --name loki --network fase4-test --network-alias loki.observability.svc.cluster.local -p 3100:3100 \
             -v "$PWD/apps/observability-telemetry/config:/config:ro" grafana/loki:3.7.9 -config.file=/config/loki.yaml
-          docker run -d --name otel --network fase4-test -p 4318:4318 -p 8889:8889 \
+          docker run -d --name otel --network fase4-test --network-alias otel-gateway.observability.svc.cluster.local -p 4318:4318 -p 8889:8889 \
             -e NEW_RELIC_LICENSE_KEY=test -e NEW_RELIC_OTLP_ENDPOINT=http://apm:9000 \
             -v "$PWD/apps/observability-telemetry/config:/config:ro" \
             otel/opentelemetry-collector-contrib:0.163.2 --config=/config/gateway.yaml
@@ -60,10 +60,37 @@ jobs:
             if curl -fsS http://localhost:3100/ready && curl -fsS http://localhost:8889/metrics >/dev/null; then break; fi
             sleep 2
           done
+          mkdir -p /tmp/fase4-podlogs/default_demo_00000000-0000-0000-0000-000000000000/app
+          touch /tmp/fase4-podlogs/default_demo_00000000-0000-0000-0000-000000000000/app/0.log
+          docker run -d --name otel-agent --user 0 --network fase4-test \
+            -v /tmp/fase4-podlogs:/var/log/pods:ro \
+            -v "$PWD/apps/observability-telemetry/config:/config:ro" \
+            otel/opentelemetry-collector-contrib:0.163.2 --config=/config/agent.yaml
+          sleep 5
+          python -c 'import datetime;from pathlib import Path;p=Path("/tmp/fase4-podlogs/default_demo_00000000-0000-0000-0000-000000000000/app/0.log");p.write_text(datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00","Z")+" stdout F fase4-filelog-test\n")'
           python tests/integration_telemetry.py
+      - name: Validate Grafana alert provisioning
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm dependency build apps/observability-metrics
+          helm template observability-metrics apps/observability-metrics --namespace observability --set-string publicHost=grafana.example.test > /tmp/metrics.yaml
+          python tests/prepare_grafana_test.py /tmp/metrics.yaml
+          GRAFANA_IMAGE=$(cat /tmp/grafana-image)
+          docker run -d --name grafana-test --network fase4-test -p 3000:3000 \
+            -e HEAL_TOKEN=test-only -e GF_SECURITY_ADMIN_PASSWORD=test-only-password \
+            -v "$PWD/apps/observability-telemetry/config/alerts.yaml:/etc/grafana/provisioning/alerting/fase4.yaml:ro" \
+            -v /tmp/fase4-datasource.yaml:/etc/grafana/provisioning/datasources/fase4.yaml:ro \
+            "$GRAFANA_IMAGE"
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/api/health; then break; fi
+            sleep 2
+          done
+          curl -fsS -u admin:test-only-password http://localhost:3000/api/v1/provisioning/alert-rules/evaluation-errors | python -c 'import json,sys;d=json.load(sys.stdin);assert d["title"]=="EvaluationHighErrorRate";print("PASS: Grafana carregou alerta provisionado")'
       - name: Diagnostic container logs
         if: failure()
         run: |
           docker logs otel || true
           docker logs loki || true
           docker logs apm || true
+          docker logs otel-agent || true
+          docker logs grafana-test || true

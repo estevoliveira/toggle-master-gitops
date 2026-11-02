@@ -38,6 +38,9 @@ for attempt in range(30):
         with urllib.request.urlopen('http://localhost:3100/loki/api/v1/query_range?' + query, timeout=5) as response:
             logs = json.load(response)
         assert logs['data']['result'], 'Loki nao retornou o log enviado pelo Collector'
+        agent_query = urllib.parse.urlencode({'query': '{k8s_namespace_name="default"} |= "fase4-filelog-test"'})
+        with urllib.request.urlopen('http://localhost:3100/loki/api/v1/query_range?' + agent_query, timeout=5) as response:
+            assert json.load(response)['data']['result'], 'Log CRI nao atravessou agente e gateway'
         with urllib.request.urlopen('http://localhost:9000/count', timeout=5) as response:
             assert json.load(response)['traces'] > 0
         print('PASS: OTLP de metricas, logs e traces atravessou Collector e backends reais de teste.')
