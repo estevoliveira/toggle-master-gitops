@@ -3,6 +3,7 @@ extensions:
     endpoint: 0.0.0.0:13133
   file_storage:
     directory: /var/lib/otelcol
+    create_directory: true
 receivers:
   filelog:
     include:

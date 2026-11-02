@@ -23,7 +23,7 @@ if [[ "${ROTATE_INTEGRATIONS:-false}" == true ]] || ! kubectl -n observability g
   read -rsp 'PagerDuty Events API v2 routing key: ' pd_key </dev/tty; printf '\n'
   read -rsp 'Discord webhook URL: ' discord_url </dev/tty; printf '\n'
   [[ ${#nr_key} -ge 10 && "$pd_key" =~ ^[a-zA-Z0-9]{32}$ ]] || { echo 'Chave New Relic/PagerDuty invalida.'; exit 2; }
-  [[ "$discord_url" =~ ^https://discord.com/api/webhooks/[0-9]+/[a-zA-Z0-9._-]+$ ]] || { echo 'Webhook deve ser uma URL oficial do Discord.'; exit 2; }
+  [[ "$discord_url" =~ ^https://discord[.]com/api/webhooks/[0-9]+/[a-zA-Z0-9._-]+$ ]] || { echo 'Webhook deve ser uma URL oficial do Discord.'; exit 2; }
   printf %s "$nr_key" > "$work_dir/nr"
   printf %s "$pd_key" > "$work_dir/pd"
   printf %s "$discord_url" > "$work_dir/discord"

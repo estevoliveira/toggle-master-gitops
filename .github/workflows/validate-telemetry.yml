@@ -39,7 +39,7 @@ jobs:
           docker run --rm -e NEW_RELIC_LICENSE_KEY=test -e NEW_RELIC_OTLP_ENDPOINT=http://apm:9000 \
             -v "$PWD/apps/observability-telemetry/config:/config:ro" \
             otel/opentelemetry-collector-contrib:0.163.2 validate --config=/config/gateway.yaml
-          docker run --rm \
+          docker run --rm --user 0 \
             -v "$PWD/apps/observability-telemetry/config:/config:ro" \
             otel/opentelemetry-collector-contrib:0.163.2 validate --config=/config/agent.yaml
           docker run --rm \
