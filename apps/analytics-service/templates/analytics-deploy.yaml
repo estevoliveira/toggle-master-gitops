@@ -29,10 +29,10 @@ spec:
           - configMapRef:
               name: fase4-telemetry
               optional: true
-        - configMapRef:
-            name: analytics-service-config
-        - secretRef:
-            name: academy-runtime
+          - configMapRef:
+              name: analytics-service-config
+          - secretRef:
+              name: academy-runtime
 
         livenessProbe:
           httpGet:
