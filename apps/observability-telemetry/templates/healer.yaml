@@ -50,6 +50,8 @@ spec:
           image: {{ .Values.pythonImage | quote }}
           command: [python, -u, /app/server.py]
           env:
+            - name: CLUSTER_NAME
+              value: {{ .Values.clusterName | quote }}
             - name: EXTERNAL_INTEGRATIONS_ENABLED
               value: {{ .Values.externalIntegrationsEnabled | quote }}
             - name: HEAL_TOKEN

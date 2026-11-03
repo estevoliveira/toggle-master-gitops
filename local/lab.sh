@@ -140,14 +140,18 @@ case "${1:-up}" in
     if ! k -n argocd get application toggle-local >/dev/null 2>&1; then
       application toggle-local local/chart toggle-master 'appsEnabled: false'
     fi
+    build_images
     wait_app toggle-local
     init_floci
-    build_images
     application observability-metrics apps/observability-metrics observability "$(cat "$ROOT/local/metrics-values.yaml")"
     wait_app observability-metrics
     external=false
     [[ -f "$STATE/integrations-enabled" ]] && external=true
-    application observability-telemetry apps/observability-telemetry observability "externalIntegrationsEnabled: $external"
+    endpoint=https://otlp.nr-data.net:4318
+    if [[ -f "$STATE/new-relic-endpoint" ]]; then endpoint="$(cat "$STATE/new-relic-endpoint")"; fi
+    application observability-telemetry apps/observability-telemetry observability "externalIntegrationsEnabled: $external
+clusterName: toggle-floci
+newRelicEndpoint: $endpoint"
     wait_app observability-telemetry
     application toggle-local local/chart toggle-master 'appsEnabled: true'
     wait_app toggle-local
@@ -171,11 +175,13 @@ case "${1:-up}" in
     endpoint=https://otlp.nr-data.net:4318
     [[ "${NEW_RELIC_REGION:-US}" == EU ]] && endpoint=https://otlp.eu01.nr-data.net:4318
     application observability-telemetry apps/observability-telemetry observability "externalIntegrationsEnabled: true
+clusterName: toggle-floci
 newRelicEndpoint: $endpoint"
     wait_app observability-telemetry
     k -n observability rollout restart deployment/otel-gateway deployment/self-healer
     k -n observability rollout status deployment/otel-gateway --timeout=180s
     k -n observability rollout status deployment/self-healer --timeout=180s
+    printf '%s' "$endpoint" > "$STATE/new-relic-endpoint"
     touch "$STATE/integrations-enabled"
     echo 'Integracoes configuradas; confirme recebimento no New Relic, PagerDuty e Discord.'
     ;;

@@ -20,6 +20,7 @@ for ((i=0;i<45;i++)); do
   sleep 2
 done
 (( count > 0 ))
+python3 "$ROOT/local/check_signals.py"
 before="$(k -n toggle-master get deployment evaluation-service -o jsonpath='{.spec.template.metadata.annotations.kubectl\.kubernetes\.io/restartedAt}')"
 bash "$ROOT/local/lab.sh" demo fail
 for ((i=0;i<90;i++)); do
