@@ -46,6 +46,9 @@ def restart_evaluation():
 
 
 def notify(status, outcome='pending'):
+    if os.environ.get('EXTERNAL_INTEGRATIONS_ENABLED', 'true') == 'false':
+        emit('notification_disabled', status=status, reason='local lab without external integrations')
+        return
     pd_body = {'routing_key': os.environ['PAGERDUTY_ROUTING_KEY'],
                'event_action': 'trigger' if status == 'firing' else 'resolve',
                'dedup_key': DEDUP_KEY}

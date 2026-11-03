@@ -7,7 +7,13 @@ metadata:
   namespace: {{ $.Release.Namespace }}
 data:
   config.yaml: |
-{{ $.Files.Get (printf "config/%s.yaml" $name) | indent 4 }}
+{{- $config := $.Files.Get (printf "config/%s.yaml" $name) | fromYaml }}
+{{- if and (eq $name "gateway") (not $.Values.externalIntegrationsEnabled) }}
+{{- $_ := unset $config.exporters "otlphttp/newrelic" }}
+{{- $_ := set $config.exporters "debug" (dict "verbosity" "basic") }}
+{{- $_ := set $config.service.pipelines.traces "exporters" (list "debug") }}
+{{- end }}
+{{ $config | toYaml | indent 4 }}
 {{- end }}
 ---
 apiVersion: v1

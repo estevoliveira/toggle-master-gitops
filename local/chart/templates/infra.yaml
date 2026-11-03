@@ -1,0 +1,69 @@
+{{- range $name, $port := dict "postgres" 5432 "redis" 6379 "floci" 4566 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+spec:
+  selector: {app: {{ $name }}}
+  ports: [{port: {{ $port }}, targetPort: {{ $port }}}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: {{ $name }}}
+  template:
+    metadata:
+      labels: {app: {{ $name }}}
+    spec:
+      containers:
+        - name: {{ $name }}
+          image: {{ if eq $name "postgres" }}postgres:16-alpine{{ else if eq $name "redis" }}redis:7-alpine{{ else }}floci/floci:2.4.0-compat{{ end }}
+          ports: [{containerPort: {{ $port }}}]
+          readinessProbe:
+            tcpSocket: {port: {{ $port }}}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: "1", memory: 768Mi}
+          {{- if eq $name "postgres" }}
+          env:
+            - {name: POSTGRES_USER, value: lab}
+            - {name: POSTGRES_PASSWORD, value: local-only-password}
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+            - {name: init, mountPath: /docker-entrypoint-initdb.d, readOnly: true}
+          {{- else if eq $name "floci" }}
+          env:
+            - {name: FLOCI_HOSTNAME, value: floci.toggle-master.svc.cluster.local}
+            - {name: FLOCI_STORAGE_MODE, value: persistent}
+            - {name: FLOCI_STORAGE_PERSISTENT_PATH, value: /app/data}
+          volumeMounts:
+            - {name: data, mountPath: /app/data}
+          {{- end }}
+      {{- if ne $name "redis" }}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: {{ $name }}-data}
+        {{- if eq $name "postgres" }}
+        - name: init
+          configMap: {name: local-db-init}
+        {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}-data
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: standard
+  resources:
+    requests: {storage: 1Gi}
+      {{- end }}
+{{- end }}

@@ -1,3 +1,4 @@
+{{- if ne .Values.publicIngress false }}
 {{- $host := required "Informe publicHost com o DNS do Load Balancer do ingress-nginx" .Values.publicHost -}}
 {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$" $host) -}}
 {{- fail "publicHost deve ser um hostname DNS valido" -}}
@@ -28,3 +29,5 @@ spec:
                 name: grafana
                 port:
                   number: 80
+
+{{- end }}

@@ -1,0 +1,11 @@
+publicHost: localhost
+publicScheme: http
+publicPort: 3000
+publicIngress: false
+monitoring:
+  grafana:
+    service:
+      type: NodePort
+      nodePort: 30000
+    env:
+      GF_SECURITY_COOKIE_SECURE: 'false'

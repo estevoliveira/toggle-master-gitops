@@ -1,0 +1,51 @@
+name: Validate local Floci lab
+on:
+  pull_request:
+    paths: [local/**, apps/observability-telemetry/**, apps/observability-metrics/**, .github/workflows/validate-local-floci.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.36.4
+      - name: Install kind
+        run: |
+          curl -fsSL https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64 -o /tmp/kind
+          chmod +x /tmp/kind
+          sudo mv /tmp/kind /usr/local/bin/kind
+      - name: Render both configurations
+        run: |
+          bash -n local/lab.sh
+          shellcheck -S warning local/lab.sh
+          helm lint local/chart --strict
+          helm template toggle-local local/chart >/tmp/local.yaml
+          helm dependency build apps/observability-metrics
+          helm template observability-metrics apps/observability-metrics -n observability -f local/metrics-values.yaml >/tmp/metrics-local.yaml
+          helm template observability-metrics apps/observability-metrics -n observability --set publicHost=aws.example.test >/tmp/metrics-aws.yaml
+          helm template observability-telemetry apps/observability-telemetry -n observability -f local/telemetry-values.yaml >/tmp/telemetry-local.yaml
+          pip install PyYAML==6.0.2
+          python local/test_render.py /tmp/local.yaml /tmp/metrics-local.yaml /tmp/metrics-aws.yaml /tmp/telemetry-local.yaml
+      - name: Run local cluster and GitOps
+        run: bash local/lab.sh up
+      - name: Prove application flow and automatic healing
+        run: bash local/verify.sh
+      - name: Diagnostics
+        if: failure()
+        run: |
+          export KUBECONFIG="$HOME/.toggle-floci-lab/kubeconfig"
+          kubectl get pods -A -o wide || true
+          kubectl get events -A --sort-by=.lastTimestamp | tail -70 || true
+          kubectl -n argocd get applications -o yaml || true
+          kubectl -n toggle-master logs deployment/analytics-service --tail=50 || true
+          kubectl -n observability logs deployment/self-healer --tail=50 || true

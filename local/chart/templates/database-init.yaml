@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-db-init
+data:
+  init.sql: |
+{{ .Files.Get "files/init.sql" | indent 4 }}

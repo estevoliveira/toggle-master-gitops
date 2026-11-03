@@ -4,4 +4,4 @@ metadata:
   name: grafana-public-url
   namespace: {{ .Release.Namespace }}
 data:
-  root-url: {{ printf "https://%s/" .Values.publicHost | quote }}
+  root-url: {{ printf "%s://%s%s/" (.Values.publicScheme | default "https") .Values.publicHost (ternary (printf ":%v" .Values.publicPort) "" (not (empty .Values.publicPort))) | quote }}
