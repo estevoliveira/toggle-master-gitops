@@ -21,6 +21,10 @@ spec:
     metadata:
       labels: {app: {{ $name }}}
     spec:
+      enableServiceLinks: false
+      {{- if eq $name "floci" }}
+      securityContext: {runAsUser: 1001, runAsGroup: 1001, fsGroup: 1001}
+      {{- end }}
       containers:
         - name: {{ $name }}
           image: {{ if eq $name "postgres" }}postgres:16-alpine{{ else if eq $name "redis" }}redis:7-alpine{{ else }}floci/floci:2.4.0-compat{{ end }}

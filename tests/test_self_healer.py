@@ -18,6 +18,13 @@ class SelfHealingTests(unittest.TestCase):
     def setUp(self):
         healer.last_restart = 0
 
+    @patch.dict('os.environ', {'EXTERNAL_INTEGRATIONS_ENABLED': 'false'})
+    @patch.object(healer, 'request_json')
+    def test_local_mode_does_not_send_external_notifications(self, request):
+        healer.notify('firing')
+        healer.notify('resolved')
+        request.assert_not_called()
+
     @patch.object(healer, 'notify')
     @patch.object(healer, 'restart_evaluation', return_value=200)
     def test_repeated_firing_restarts_only_once(self, restart, notify):

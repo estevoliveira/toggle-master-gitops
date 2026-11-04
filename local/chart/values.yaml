@@ -4,5 +4,5 @@ services:
   auth-service: {port: 8001, database: auth_db, tag: e7a834f942292a84c24d368baf53c1ddbd59d666}
   flag-service: {port: 8002, database: flags_db, tag: deb436070e7241b96f3c3c3b09a933fc8d95f697}
   targeting-service: {port: 8003, database: targeting_db, tag: bd9186ffcee16abf754951304000d63397454c49}
-  evaluation-service: {port: 8004, tag: d105de9ae23970bd9d83330aa49e58f05a7b6589}
-  analytics-service: {port: 8005, tag: 3a643e23d6708f515dbbd1e58e81664028fa8f99}
+  evaluation-service: {port: 8004, tag: 75fa876c367c5bc880fa405f01e30ef3be9e71fb}
+  analytics-service: {port: 8005, tag: d2da40642d645e1932a029d97ab1e213d5782c7e}

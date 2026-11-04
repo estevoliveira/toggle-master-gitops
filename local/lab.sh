@@ -22,8 +22,20 @@ namespace() { k create namespace "$1" --dry-run=client -o yaml | k apply -f -; }
 secret() { local ns="$1" name="$2"; shift 2; k -n "$ns" create secret generic "$name" "$@" --dry-run=client -o yaml | k apply -f -; }
 wait_app() {
   local name="$1"
-  for ((i=0;i<180;i++)); do
+  for ((i=0;i<120;i++)); do
     if [[ "$(k -n argocd get application "$name" -o jsonpath='{.status.sync.status}/{.status.health.status}' 2>/dev/null)" == Synced/Healthy ]]; then return; fi
+    if (( i % 6 == 0 )); then
+      k -n argocd get application "$name" -o custom-columns='APP:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status' || true
+    fi
+    if (( i > 18 )); then
+      unhealthy="$(k get pods -A -o jsonpath='{range .items[*]}{range .status.containerStatuses[*]}{.state.waiting.reason}{" "}{end}{end}')"
+      if [[ "$unhealthy" == *CrashLoopBackOff* ]]; then
+        k get pods -A
+        k -n toggle-master logs deployment/floci --tail=70 || true
+        k -n toggle-master logs deployment/postgres --tail=40 || true
+        return 1
+      fi
+    fi
     sleep 5
   done
   k -n argocd get application "$name" -o yaml
