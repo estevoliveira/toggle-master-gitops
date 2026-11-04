@@ -36,6 +36,9 @@ spec:
             - {name: TARGETING_SERVICE_URL, value: "http://targeting-service:8003"}
             - {name: REDIS_URL, value: "redis://redis:6379"}
             - {name: MASTER_KEY, value: local-only-master-key}
+            - name: SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef: {name: academy-databases, key: service-api-key}
             {{- if $svc.database }}
             - {name: DATABASE_URL, value: {{ printf "postgres://lab:local-only-password@postgres:5432/%s?sslmode=disable" $svc.database | quote }}}
             {{- end }}
