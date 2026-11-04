@@ -85,7 +85,9 @@ build_images() {
       fi
       git -C "$dir" fetch --depth 1 origin "$revision"
       git -C "$dir" checkout --detach FETCH_HEAD
-      docker build -t "$image" "$dir"
+      # evaluation contains Dockerfile and dockerfile; macOS can collapse these names.
+      git -C "$dir" show "$revision:Dockerfile" > "$dir/Dockerfile.floci"
+      docker build -f "$dir/Dockerfile.floci" -t "$image" "$dir"
     fi
     kind load docker-image --name "$CLUSTER" "$image"
   done < "$ROOT/local/sources.lock"
@@ -149,9 +151,11 @@ case "${1:-up}" in
     fi
     secret toggle-master academy-databases --from-literal=service-api-key=local-demo-api-key
     # On rerun do not remove already running app Deployments.
-    if ! k -n argocd get application toggle-local >/dev/null 2>&1; then
-      application toggle-local local/chart toggle-master 'appsEnabled: false'
+    app_values='appsEnabled: false'
+    if k -n argocd get application toggle-local >/dev/null 2>&1; then
+      app_values="$(k -n argocd get application toggle-local -o jsonpath='{.spec.source.helm.values}')"
     fi
+    application toggle-local local/chart toggle-master "$app_values"
     build_images
     wait_app toggle-local
     init_floci

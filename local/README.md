@@ -13,7 +13,7 @@ reconciliados pelo Argo CD. Nao representa EKS gerenciado em nuvem.
 2. Instale as ferramentas (Homebrew precisa estar instalado):
 
 ```bash
-brew install kind kubectl helm
+brew install kind kubectl helm python
 ```
 
 3. Baixe o repositorio em uma pasta nova para nao alterar seu checkout AWS:
