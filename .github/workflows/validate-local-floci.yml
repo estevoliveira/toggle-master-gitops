@@ -52,3 +52,4 @@ jobs:
           kubectl -n toggle-master logs deployment/floci --tail=50 || true
           kubectl -n toggle-master logs deployment/postgres --tail=50 || true
           kubectl -n observability logs deployment/otel-gateway --tail=50 || true
+          kubectl -n toggle-master logs job/fase4-demo --tail=50 || true

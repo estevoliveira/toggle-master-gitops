@@ -23,7 +23,7 @@ secret() { local ns="$1" name="$2"; shift 2; k -n "$ns" create secret generic "$
 wait_app() {
   local name="$1"
   for ((i=0;i<120;i++)); do
-    if [[ "$(k -n argocd get application "$name" -o jsonpath='{.status.sync.status}/{.status.health.status}' 2>/dev/null)" == Synced/Healthy ]]; then return; fi
+    if k -n argocd get application "$name" -o json 2>/dev/null | python3 "$ROOT/local/app_ready.py"; then return; fi
     if (( i % 6 == 0 )); then
       k -n argocd get application "$name" -o custom-columns='APP:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status' || true
     fi
@@ -171,6 +171,9 @@ newRelicEndpoint: $endpoint"
     wait_app observability-telemetry
     application toggle-local local/chart toggle-master 'appsEnabled: true'
     wait_app toggle-local
+    for service in auth-service flag-service targeting-service evaluation-service analytics-service; do
+      k -n toggle-master rollout status "deployment/$service" --timeout=180s
+    done
     echo 'Base local instalada. Grafana http://localhost:3000 | Argo CD http://localhost:8080'
     echo 'Use: bash local/lab.sh passwords; bash local/lab.sh demo start'
     echo 'Integracoes externas e evidencias finais ainda precisam ser verificadas.'
