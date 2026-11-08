@@ -14,6 +14,7 @@ variable "cluster_name" {
 variable "argocd_chart_version" {
   description = "Versão do Helm Chart do Argo CD"
   type        = string
+  default     = "10.15.0"
 }
 
 variable "service_type" {
