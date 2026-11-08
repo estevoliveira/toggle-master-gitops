@@ -1,5 +1,5 @@
 
-name: Terraform CD
+name: Terraform ArgoCD Deploy
 
 on:
   workflow_dispatch:
