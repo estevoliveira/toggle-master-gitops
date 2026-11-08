@@ -1,0 +1,146 @@
+
+name: Terraform CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      AWS_ACCESS_KEY_ID:
+        description: "AWS Access Key ID (opcional)"
+        required: false
+        type: string
+
+      AWS_SECRET_ACCESS_KEY:
+        description: "AWS Secret Access Key (opcional)"
+        required: false
+        type: string
+
+      AWS_SESSION_TOKEN:
+        description: "AWS Session Token (opcional)"
+        required: false
+        type: string
+
+      LAB_ROLE:
+        description: "ARN do IAM Role do laboratório (opcional)"
+        required: false
+        type: string
+
+      BUCKET_NAME:
+        description: "Nome do bucket S3 para Terraform State (opcional)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  TF_IN_AUTOMATION: true
+
+jobs:
+  terraform:
+    name: Terraform CD
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: argocd
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID || secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY || secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ inputs.AWS_SESSION_TOKEN || secrets.AWS_SESSION_TOKEN }}
+      LAB_ROLE: ${{ inputs.LAB_ROLE || secrets.LAB_ROLE }}
+      BUCKET_NAME: ${{ inputs.BUCKET_NAME || secrets.BUCKET_NAME }}
+
+    steps:
+
+      # --------------------------------------------------
+      # Checkout
+      # --------------------------------------------------
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --------------------------------------------------
+      # Setup Terraform
+      # --------------------------------------------------
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      # --------------------------------------------------
+      # Validate Inputs
+      # --------------------------------------------------
+
+      - name: Validate AWS configuration
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+            echo "::error::AWS_ACCESS_KEY_ID não informado."
+            exit 1
+          fi
+
+          if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::AWS_SECRET_ACCESS_KEY não informado."
+            exit 1
+          fi
+
+          if [ -z "$LAB_ROLE" ]; then
+            echo "::error::LAB_ROLE não informado."
+            exit 1
+          fi
+
+          if [ -z "$BUCKET_NAME" ]; then
+            echo "::error::BUCKET_NAME não informado."
+            exit 1
+          fi
+
+      # --------------------------------------------------
+      # Mask AWS credentials
+      # --------------------------------------------------
+
+      - name: Mask AWS credentials
+        run: |
+          echo "::add-mask::$AWS_ACCESS_KEY_ID"
+          echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
+          if [ -n "$AWS_SESSION_TOKEN" ]; then
+            echo "::add-mask::$AWS_SESSION_TOKEN"
+          fi
+
+      # --------------------------------------------------
+      # Configure AWS
+      # --------------------------------------------------
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # --------------------------------------------------
+      # Check AWS Identity
+      # --------------------------------------------------
+
+      - name: Check AWS identity
+        run: aws sts get-caller-identity
+
+      # --------------------------------------------------
+      # Terragrunt Init
+      # --------------------------------------------------
+
+      - name: Terraform Init
+        run: terraform init
+
+      # --------------------------------------------------
+      # Terraform Plan
+      # --------------------------------------------------
+
+      - name: Terraform Plan
+        run: terraform plan -input=false
+
+      # --------------------------------------------------
+      # Terraform Apply
+      # --------------------------------------------------
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false
