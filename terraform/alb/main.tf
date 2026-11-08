@@ -24,7 +24,7 @@ resource "helm_release" "alb_controller" {
 
   set {
     name  = "region"
-    value = vars.region
+    value = var.region
   }
 
   set {
