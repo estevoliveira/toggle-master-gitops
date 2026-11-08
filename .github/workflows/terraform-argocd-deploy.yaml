@@ -51,7 +51,6 @@ jobs:
       AWS_SESSION_TOKEN: ${{ inputs.AWS_SESSION_TOKEN || secrets.AWS_SESSION_TOKEN }}
       LAB_ROLE: ${{ inputs.LAB_ROLE || secrets.LAB_ROLE }}
       BUCKET_NAME: ${{ inputs.BUCKET_NAME || secrets.BUCKET_NAME }}
-
     steps:
 
       # --------------------------------------------------
@@ -129,14 +128,25 @@ jobs:
       # --------------------------------------------------
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=$BUCKET_NAME" \
+            -backend-config="key=argocd/terraform.tfstate" \
+            -backend-config="region=$AWS_REGION" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
 
       # --------------------------------------------------
       # Terraform Plan
       # --------------------------------------------------
 
       - name: Terraform Plan
-        run: terraform plan -input=false
+        env:
+          TF_VAR_region: ${{ env.AWS_REGION }}
+          TF_VAR_cluster_name: ${{ vars.EKS_CLUSTER_NAME || 'toggle-cluster' }}
+          TF_VAR_argocd_chart_version: ${{ vars.ARGOCD_CHART_VERSION || '10.15.0'}}
+          TF_VAR_service_type: LoadBalancer
+        run: terraform plan -input=false -out=tfplan
 
       # --------------------------------------------------
       # Terraform Apply
