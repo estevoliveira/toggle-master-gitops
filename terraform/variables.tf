@@ -21,3 +21,8 @@ variable "service_type" {
   type        = string
   default     = "LoadBalancer"
 }
+
+variable "vpc_id" {
+  description = "ID do VPC"
+  type        = string
+}

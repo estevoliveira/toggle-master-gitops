@@ -22,4 +22,16 @@ resource "helm_release" "alb_controller" {
     value = "aws-load-balancer-controller"
   }
 
+  set {
+    name  = "region"
+    value = vars.region
+  }
+
+  set {
+    name  = "vpcId"
+    value = var.vpc_id
+  }
+
+
+
 }
