@@ -131,7 +131,7 @@ jobs:
         run: |
           terraform init \
             -backend-config="bucket=$BUCKET_NAME" \
-            -backend-config="key=./terraform.tfstate" \
+            -backend-config="key=argocd/terraform.tfstate" \
             -backend-config="region=$AWS_REGION" \
             -backend-config="encrypt=true" \
             -backend-config="use_lockfile=true"
